@@ -59,7 +59,7 @@
         [ImgShow showImgViewWithType:ImgShowType_Line withImgs:aryImgs withImgURLs:data.aryImgs withImgFrames:aryImgScrFrames withCurIndex:currentImgIndex];
     };
     
-//    [ProcessDialog showDialog];
+    [ProcessDialog showDialog];
     [self performSelector:@selector(closeProcess) withObject:nil afterDelay:5.0f];
 }
 - (void) closeProcess
