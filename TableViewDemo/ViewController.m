@@ -56,7 +56,7 @@
         BaseTableViewCell *cell = (BaseTableViewCell*)objSelf;
         ItemData *data = wkSelf.aryItemDatas[cell.tag];
         
-        [ImgShow showImgViewWithType:ImgShowType_Line withImgs:aryImgs withImgURLs:data.aryImgs withImgFrames:aryImgScrFrames withCurIndex:currentImgIndex];
+        [ImgShow showImgViewWithType:ImgShowType_Vertical withImgs:aryImgs withImgURLs:data.aryImgs withImgFrames:aryImgScrFrames withCurIndex:currentImgIndex];
     };
     
     [ProcessDialog showDialog];

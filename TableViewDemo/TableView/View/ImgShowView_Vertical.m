@@ -58,7 +58,7 @@ static CGRect st_frameOri;
     frameTo.origin.y = ([UIScreen mainScreen].bounds.size.height - frameTo.size.height)/2;
     
     st_frameOri = frameTo;
-
+    
     int tx = (frameTo.origin.x - frameBegin.origin.x) + frameTo.size.width/2 - frameBegin.size.width/2;
     int ty = frameTo.origin.y - frameBegin.origin.y + frameTo.size.height/2 - frameBegin.size.height/2;
     float sx = frameTo.size.width/frameBegin.size.width;
