@@ -37,7 +37,7 @@
     [_tableView setBackgroundColor:[UIColor whiteColor]];
     [_tableView setDelegate:(id)self];
     [_tableView setDataSource:(id)self];
-//    [self.view addSubview:_tableView];
+    [self.view addSubview:_tableView];
     
     __weak typeof(self) wkSelf = self;
     int maxWidth = CGRectGetWidth(wkSelf.tableView.bounds);
@@ -56,11 +56,11 @@
         BaseTableViewCell *cell = (BaseTableViewCell*)objSelf;
         ItemData *data = wkSelf.aryItemDatas[cell.tag];
         
-        [ImgShow showImgViewWithType:ImgShowType_Vertical withImgs:aryImgs withImgURLs:data.aryImgs withImgFrames:aryImgScrFrames withCurIndex:currentImgIndex];
+        [ImgShow showImgViewWithType:data.imgShowType withImgs:aryImgs withImgURLs:data.aryImgs withImgFrames:aryImgScrFrames withCurIndex:currentImgIndex];
     };
     
-    [ProcessDialog showDialog];
-    [self performSelector:@selector(closeProcess) withObject:nil afterDelay:5.0f];
+//    [ProcessDialog showDialog];
+//    [self performSelector:@select/or(closeProcess) withObject:nil afterDelay:5.0f];
 }
 - (void) closeProcess
 {

@@ -29,6 +29,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-4" withType:@"jpg"]
                      ];
     data.itemStyle = ItemStyle_ThreeImgs;
+    data.imgShowType = ImgShowType_Line;
     [muAryResult addObject:data];
     
     // --------------
@@ -40,6 +41,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-3" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_1;
+    data.imgShowType = ImgShowType_Line;
     [muAryResult addObject:data];
     
     // --------------
@@ -52,6 +54,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"timg-24" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
+    data.imgShowType = ImgShowType_Vertical;
     [muAryResult addObject:data];
     
     // --------------
@@ -62,6 +65,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-12" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_ThreeImgs;
+    data.imgShowType = ImgShowType_Vertical;
     [muAryResult addObject:data];
     
     // --------------
@@ -76,6 +80,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-20" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
+    data.imgShowType = ImgShowType_Line;
     [muAryResult addObject:data];
     
     // --------------
@@ -84,6 +89,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-23" withType:@"jpg"]
                      ];
     data.itemStyle = ItemStyle_OneImg;
+    data.imgShowType = ImgShowType_Line;
     [muAryResult addObject:data];
     
     if(completeBlock != nil){

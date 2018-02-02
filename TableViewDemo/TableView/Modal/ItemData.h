@@ -7,6 +7,7 @@
 //
 
 #import <Foundation/Foundation.h>
+#import "ImgShow.h"
 
 typedef enum : int{
     ItemStyle_OneImg = 1, /* 只有一张图片 */
@@ -24,5 +25,7 @@ typedef enum : int{
 @property(nonatomic, retain) NSArray<NSURL*> *aryImgs;
 
 @property(nonatomic, assign) ItemStyle itemStyle;
+
+@property(nonatomic, assign) ImgShowType imgShowType;
 
 @end

@@ -9,6 +9,11 @@
 #import "ImgShowView_Vertical.h"
 #import "CPublic.h"
 
+static NSString *const AnimationKey_Transform = @"Transform";
+static NSString *const AnimationKey_Opacity = @"Opacity";
+static NSString *const AnimationKey_Layer = @"Layer";
+static NSString *const Key_AnimationGroup = @"Key_AnimationGroup";
+
 @interface ImgShowView_Vertical()<CAAnimationDelegate>
 
 @property(nonatomic, retain) UIView *viewWhiteColor;
@@ -17,23 +22,25 @@
 
 @property(nonatomic, assign) BOOL beginShow;
 
-@property(nonatomic, retain) NSMutableArray<CALayer*> *muAryLayer;
+@property(nonatomic, retain) NSMutableArray<UIView*> *muAryViewSave;
 
-@property(nonatomic, retain) UIView *viewLayerContainer;
+@property(nonatomic, retain) NSMutableArray<UIView*> *muAryViewShow;
 
-@property(nonatomic, assign) float scaleChange;
+@property(nonatomic, retain) NSMutableArray<NSValue*> *muAryTransfrom;
 
-@property(nonatomic, assign) float opacityChange;
+@property(nonatomic, retain) NSMutableArray<NSNumber*> *muAryAlpha;
 
-@property(nonatomic, assign) CGPoint pointLastItem;
+@property(nonatomic, retain) UIView *viewContainter;
 
-@property(nonatomic, assign) CGPoint pointFirstItem;
+@property(nonatomic, assign) int numOfShowView;
 
-@property(nonatomic, assign) CGPoint pointMove;
+@property(nonatomic, retain) UIPanGestureRecognizer *panGes;
 
-@property(nonatomic, assign) float scrollY;
+@property(nonatomic, assign) CGPoint pointBeginTouch;
 
-@property(nonatomic, assign) float scrollX;
+@property(nonatomic, assign) BOOL isMoveAlready;
+
+@property(nonatomic, retain) NSMutableDictionary<NSString*, NSMutableArray*> *muDicAnimation;
 
 @end
 
@@ -47,7 +54,7 @@ static CGRect st_frameOri;
 + (CATransform3D) getBeginTransform:(CGRect)frameBegin
                             withImg:(UIImage*)imgCur
 {
-    int widthImg = [UIScreen mainScreen].bounds.size.width*5/10;
+    int widthImg = [UIScreen mainScreen].bounds.size.width*6/10;
     int heightImg = widthImg * 4/3;
     
     CATransform3D transformResult = CATransform3DIdentity;
@@ -68,6 +75,14 @@ static CGRect st_frameOri;
     transformResult = CATransform3DScale(transformResult, sx, sy, 1.0f);
     return transformResult;
 }
+- (void) removeFromSuperview
+{
+    [super removeFromSuperview];
+    
+    [_muAryViewSave removeAllObjects];
+    [_muAryViewShow removeAllObjects];
+    [_muDicAnimation removeAllObjects];
+}
 
 // =============================================================================
 #pragma mark - 类方法
@@ -84,47 +99,87 @@ static CGRect st_frameOri;
         
         _backgroundView = [UIView new];
         [_backgroundView setFrame:self.bounds];
-        [_backgroundView setUserInteractionEnabled:YES];
+        [_backgroundView setUserInteractionEnabled:NO];
         [_backgroundView setBackgroundColor:[UIColor blackColor]];
         [self addSubview:_backgroundView];
         
-        _viewLayerContainer = [UIView new];
-        [_viewLayerContainer setFrame:self.bounds];
-        [_viewLayerContainer setUserInteractionEnabled:YES];
-        [_viewLayerContainer setBackgroundColor:Color_Transparent];
-        [self addSubview:_viewLayerContainer];
+        _viewContainter = [UIView new];
+        [_viewContainter setFrame:self.bounds];
+        [_viewContainter setUserInteractionEnabled:YES];
+        [_viewContainter setBackgroundColor:Color_Transparent];
+        [self addSubview:_viewContainter];
         
         UITapGestureRecognizer *tapGes = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTapGes:)];
-        [_viewLayerContainer addGestureRecognizer:tapGes];
-        
-        UIPanGestureRecognizer *panGes = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGes:)];
-        [_viewLayerContainer addGestureRecognizer:panGes];
-        
-        _muAryLayer = [NSMutableArray new];
+        [_viewContainter addGestureRecognizer:tapGes];
+
+        _panGes = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePanGes:)];
     }
     return self;
 }
-- (CALayer*) getLayer
+- (void) createTransfroms
 {
-    CALayer *layerResult = nil;
+    _numOfShowView = 5;
+    _numOfShowView = (_numOfShowView <= self.aryImgs.count) ? _numOfShowView : (int)self.aryImgs.count;
+    _muDicAnimation = [NSMutableDictionary new];
     
-    for(CALayer *layerFor in _muAryLayer){ // 复用
-        if([layerFor superlayer] == nil){
-            layerResult = layerFor;
-        }
+    if(_muAryTransfrom == nil){
+        _muAryTransfrom = [NSMutableArray new];
     }
-    if(layerResult == nil) { // 没有就新建
-        if(_muAryLayer == nil){
-            _muAryLayer = [NSMutableArray new];
-        }
-        CALayer *layer = [CALayer new];
-        [layer setBackgroundColor:Color_Transparent.CGColor];
-        [layer setContentsGravity:kCAGravityResize];
+    if(_muAryAlpha == nil){
+        _muAryAlpha = [NSMutableArray new];
+    }
+    
+    const float scaleValue = 0.08f;
+    for(int i=0; i<_numOfShowView; i+=1){
+        CATransform3D transform = CATransform3DIdentity;
         
-        [_muAryLayer addObject:layer];
-        layerResult = layer;
+        if((i+1) == _numOfShowView){
+            float scale = 1.0f - (scaleValue*(i-1));
+            scale = (scale >= 0.f)? scale : 0.f;
+            
+            float ty = - (_viewContainter.bounds.size.height/2 + CGRectGetHeight(st_frameOri)/2);
+            transform = CATransform3DTranslate(transform, 0, ty, 0);
+            transform = CATransform3DScale(transform, scale, scale, 1);
+            
+        } else {
+            float scale = 1 - (scaleValue*i);
+            scale = (scale >= 0.f)? scale : 0.f;
+            float ty = -(CGRectGetHeight(st_frameOri)/10)*i;
+            transform = CATransform3DTranslate(transform, 0, ty, 0);
+            transform = CATransform3DScale(transform, scale, scale, 1);
+        }
+        float alpha = 1.0f - (0.2f*i);
+        alpha = (alpha >= 0.f)? alpha : 0.f;
+        
+        [_muAryTransfrom addObject:[NSValue valueWithCATransform3D:transform]];
+        [_muAryAlpha addObject:[NSNumber numberWithFloat:alpha]];
     }
-    return layerResult;
+}
+- (UIView*) getViewSave
+{
+    UIView *viewResult = nil;
+    
+    if(_muAryViewSave == nil){
+        _muAryViewSave = [NSMutableArray new];
+    }
+    
+    for(UIView *viewFor in _muAryViewSave){ // 复用
+        if([viewFor superview] == nil){
+            viewResult = viewFor;
+        }
+    }
+    if(viewResult == nil) { // 没有就新建
+        UIView *view = [UIView new];
+        [view setBackgroundColor:Color_Transparent];
+        [view setContentMode:UIViewContentModeScaleToFill];
+        [view setUserInteractionEnabled:NO];
+        [view.layer setContentsGravity:kCAGravityResize];
+        [_muAryViewSave addObject:view];
+        viewResult = view;
+    }
+    viewResult.layer.transform = CATransform3DIdentity;
+    viewResult.layer.opacity = 1.0f;
+    return viewResult;
 }
 /** 设置黑色背景的透明度 */
 - (void) setBackViewAlpha:(float)alpha
@@ -136,7 +191,9 @@ static CGRect st_frameOri;
     
     if(CGRectEqualToRect(self.frame, CGRectZero) == YES) { return; }
     
-    [self handleWhiteView];
+    if(_beginShow == YES){
+        [self handleWhiteView];
+    }
 }
 - (void) handleWhiteView
 {
@@ -156,207 +213,165 @@ static CGRect st_frameOri;
     _beginShow = YES; // 开启显示图片
     [self setNeedsLayout];
     [self layoutIfNeeded];
+    [self createTransfroms];
     [self beginAniForImgShow];
 }
 - (void) beginAniForImgShow{ // 启动图片出现的动画
     
-    _scaleChange = 0.15f;
-    _opacityChange = 0.2f;
-    
-    NSMutableArray<CALayer*> *muAryTemp = [NSMutableArray new];
-    
     CGRect frame = st_frameOri;
+    NSInteger countFor = _numOfShowView;
+    if(countFor > self.aryImgs.count){
+        countFor = self.aryImgs.count;
+    }
     
-    int zPosition = 0;
-    UIImage *img = self.aryImgs[self.curIndex];
-    CALayer *layerFirst = [self getLayer];
-    [layerFirst setFrame:frame];
-    layerFirst.contents = (__bridge id)img.CGImage;
-    [_viewLayerContainer.layer addSublayer:layerFirst];
-    [muAryTemp addObject:layerFirst];
-    layerFirst.zPosition = zPosition;
+    if(_muAryViewShow == nil){
+        _muAryViewShow = [NSMutableArray new];
+    }
     
-    int lastHeight = CGRectGetHeight(st_frameOri);
-    int ty = 0;
-    float sz = 0.8f;
-    float opacity = 0.8f;
-    int indexBegin = self.curIndex + 1;
-    CATransform3D transformLast = CATransform3DIdentity;
-    CALayer *layerLast = nil;
-    
-    for(int i=0, index=0; i<self.aryImgs.count && index<3; i+=1, index+=1){
-        if(indexBegin >= self.aryImgs.count){
-            indexBegin = 0;
+    for(int index=self.curIndex, num=0; num<countFor; num+=1){
+        UIView *view = [self getViewSave];
+        [view setUserInteractionEnabled:NO];
+        [view setFrame:frame];
+        [view setTag:num];
+        UIImage *imgFor = self.aryImgs[index];
+        view.layer.contents = (__bridge id)imgFor.CGImage;
+        [_viewContainter addSubview:view];
+        [_viewContainter sendSubviewToBack:view];
+        
+        [_muAryViewShow addObject:view];
+        
+        NSNumber *numAlpha = _muAryAlpha[num];
+        CATransform3D transform = [_muAryTransfrom[num] CATransform3DValue];
+        CATransform3D transformBegin = transform;
+        if(index != self.curIndex){
+            transformBegin = CATransform3DTranslate(transformBegin, 0, -40, 0);
         }
-        int height = lastHeight*sz;
-        ty += - height/2;
-        lastHeight = height;
-        zPosition -= 1;
-        UIImage *imgFor = self.aryImgs[indexBegin];
-        CALayer *layerFor  = [self getLayer];
-        layerFor.contents = (__bridge id)imgFor.CGImage;;
-        [layerFor setFrame:frame];
-        layerFor.zPosition = zPosition;
-        [_viewLayerContainer.layer addSublayer:layerFor];
         
-        CATransform3D transformFor = layerFor.transform;
-        transformFor = CATransform3DTranslate(transformFor, 0, ty, 0);
-        transformFor = CATransform3DScale(transformFor, sz, sz, 1.0f);
-        
-        [muAryTemp addObject:layerFor];
-        
-        // ---- 开始动画
-        const int aniY = ty-40;
-        CATransform3D transformAni = CATransform3DIdentity;
-        transformAni = CATransform3DTranslate(transformAni, 0, aniY, 0);
-        transformAni = CATransform3DScale(transformAni, sz, sz, 1.0f);
         CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
-        animation.fromValue = [NSValue valueWithCATransform3D:transformAni];
-        animation.toValue = [NSValue valueWithCATransform3D:transformFor];
-
+        animation.fromValue = [NSValue valueWithCATransform3D:transformBegin];
+        animation.toValue = [NSValue valueWithCATransform3D:transform];
+        
         CABasicAnimation *animationOpactity = [CABasicAnimation animationWithKeyPath:@"opacity"];
-        animationOpactity.fromValue = @(0.0f) ;
-        animationOpactity.toValue = @(opacity);
-
-        const float duration = 0.8f;
-        CAAnimationGroup *animationGroup = [CAAnimationGroup animation];
-        animationGroup.animations = @[animation, animationOpactity];
-        animationGroup.duration = duration;
-        animationGroup.beginTime = CACurrentMediaTime() + duration/2 * index;
-        animationGroup.fillMode = kCAFillModeBoth;
-        animationGroup.removedOnCompletion = NO;
-        animationGroup.delegate = (id)self;
-        [animationGroup setValue:[NSValue valueWithCATransform3D:transformFor] forKey:@"transform"];
-        [animationGroup setValue:[NSNumber numberWithFloat:opacity] forKey:@"opacity"];
-        [animationGroup setValue:layerFor forKey:@"layer"];
+        if(index == self.curIndex){
+            animationOpactity.fromValue = @(1.0f);
+        } else {
+            animationOpactity.fromValue = @(0.0f);
+        }
+        animationOpactity.toValue = numAlpha;
         
-        [layerFor addAnimation:animationGroup forKey:@"animationGroup"];
+        const float duration = 0.6f;
+        CAAnimationGroup *animationGroup = [self createAnimationGroup:@[animation, animationOpactity]
+                                                         withNumAlpha:numAlpha
+                                                            withLayer:view.layer
+                                                   withTransformValue:[NSValue valueWithCATransform3D:transform]
+                                                              withBeginTime:(duration/2*num)
+                                                         withDuration:duration];
         
-        indexBegin += 1;
-        opacity -= _opacityChange;
-        sz -= _scaleChange;
+        [self addAnimation:animationGroup withLayer:view.layer];
         
-        transformLast = transformFor;
-        layerLast = layerFor;
-    }
-    if(layerLast != nil){
-        CALayer *layerTemp = [CALayer layer];
-        [layerTemp setFrame:layerLast.frame];
-        layerTemp.transform = transformLast;
-        
-        _pointLastItem = CGPointMake(CGRectGetMinX(layerTemp.frame) + CGRectGetWidth(layerTemp.frame)/2,
-                                     CGRectGetMinY(layerTemp.frame) + CGRectGetHeight(layerTemp.frame)/2);
-        layerTemp = nil;
-    }
-    if(layerFirst != nil){
-        CALayer *layerTemp = [CALayer layer];
-        [layerTemp setFrame:layerFirst.frame];
-        layerTemp.transform = layerFirst.transform;
-        _pointFirstItem = CGPointMake(CGRectGetMinX(layerFirst.frame) + CGRectGetWidth(layerFirst.frame)/2,
-                                      CGRectGetMinY(layerFirst.frame) + CGRectGetHeight(layerFirst.frame)/2);
-        layerTemp = nil;
-    }
-    
-    for(CALayer *layerFor in _muAryLayer){
-        if([muAryTemp containsObject:layerFor] != YES){
-            [layerFor removeFromSuperlayer];
+        index += 1;
+        if(index >= self.aryImgs.count){
+            index = 0;
         }
     }
-    [muAryTemp removeAllObjects];
-    muAryTemp = nil;
+    
+    UIView *viewCur = [_muAryViewShow firstObject];
+    if(viewCur != nil){
+        [viewCur setUserInteractionEnabled:YES];
+        [viewCur addGestureRecognizer:_panGes];
+    }
 }
+- (CAAnimationGroup*) createAnimationGroup:(NSArray*)aryAnimation
+                              withNumAlpha:(NSNumber*)numAlpha
+                                 withLayer:(CALayer*)layer
+                        withTransformValue:(NSValue*)valueTransform
+                             withBeginTime:(CFTimeInterval)time
+                              withDuration:(float)duration
+{
+    CAAnimationGroup *animationGroup = [CAAnimationGroup animation];
+    animationGroup.animations = aryAnimation;
+    animationGroup.duration = duration;
+    animationGroup.beginTime = time;
+    animationGroup.fillMode = kCAFillModeBoth;
+    animationGroup.removedOnCompletion = NO;
+    animationGroup.delegate = (id)self;
+    
+    [animationGroup setValue:numAlpha forKey:AnimationKey_Opacity];
+    [animationGroup setValue:layer forKey:AnimationKey_Layer];
+    [animationGroup setValue:valueTransform forKey:AnimationKey_Transform];
+    
+    return animationGroup;
+}
+- (void) addAnimation:(CAAnimationGroup*)animation withLayer:(CALayer*)layer
+{
+    if([layer animationForKey:Key_AnimationGroup] != nil){ // 有动画正在执行
+        NSString *strKey = [NSString stringWithFormat:@"%p", layer];
+        NSMutableArray *muAry = _muDicAnimation[strKey];
+        if(muAry == nil){
+            muAry = [NSMutableArray new];
+            [_muDicAnimation setObject:muAry forKey:strKey];
+        }
+        [muAry addObject:animation];
+    } else {
+        animation.beginTime = CACurrentMediaTime() + animation.beginTime;
+        [layer addAnimation:animation forKey:Key_AnimationGroup];
+    }
+}
+- (void) checkoutAnimationWithLayer:(CALayer*)layer
+{
+    NSString *strKey = [NSString stringWithFormat:@"%p", layer];
+    NSMutableArray *muAry = _muDicAnimation[strKey];
+    if(muAry != nil
+        && muAry.count > 0){
+        CAAnimationGroup *animation = [muAry firstObject];
+        [muAry removeObject:animation];
+        animation.beginTime = CACurrentMediaTime() + animation.beginTime*2;
+        [layer addAnimation:animation forKey:Key_AnimationGroup];
+    }
+}
+
 - (void) closeImgShowView:(UIView*)view
 {
     CGRect frameView = view.frame;
-    
+
     UIImageView *imgViewAni = [UIImageView new];
     UIImage *img = [view lhj_getCurrentImg];
     imgViewAni.image = img;
     [imgViewAni setContentMode:UIViewContentModeScaleToFill];
     [imgViewAni setBackgroundColor:Color_Transparent];
     
-    const int imgWidth = img.size.width;
-    const int imgHeight = img.size.height;
-    float valueWidth = frameView.size.width / imgWidth;
-    float valueHeight = frameView.size.height / imgHeight;
-    CGRect frameCur;
-    if(valueWidth <= valueHeight){
-        frameCur.size.width = frameView.size.width;
-        frameCur.size.height = frameView.size.width * imgHeight/ imgWidth;
-        frameCur.origin.x = frameView.origin.x;
-        frameCur.origin.y = CGRectGetMinY(frameView) + CGRectGetHeight(frameView)/2 - frameCur.size.height/2;
-        
-    } else {
-        frameCur.size.height = view.bounds.size.height;
-        frameCur.size.width = view.bounds.size.height * imgWidth/imgHeight;
-        frameCur.origin.x = CGRectGetMinX(frameView) + CGRectGetWidth(frameView)/2 - frameCur.size.width/2;
-        frameCur.origin.y = view.frame.origin.y;
-    }
-    [imgViewAni setFrame:frameCur];
+    [imgViewAni setFrame:frameView];
     [self addSubview:imgViewAni];
-    [_viewLayerContainer setHidden:YES];
-    CGRect frameTo;
+    [_viewContainter setHidden:YES];
     
+    CGRect frameTo;
     if(self.curIndex < self.aryImgFrames.count){ // 开启动画
         frameTo = [self.aryImgFrames[self.curIndex] CGRectValue];
-        
+
     } else {
-        frameTo = frameCur;
-        if(CGRectGetMaxX(frameTo)/2 >= self.bounds.size.width/2){
-            frameTo.origin.x = self.bounds.size.width;
+        frameTo = frameView;
+        if(CGRectGetMaxX(frameTo)/2 >= _viewContainter.bounds.size.width/2){
+            frameTo.origin.x = _viewContainter.bounds.size.width;
         } else {
-            frameTo.origin.x = self.bounds.origin.x - frameTo.size.width;
+            frameTo.origin.x = _viewContainter.bounds.origin.x - frameTo.size.width;
         }
     }
-    
-    float tx = - ((CGRectGetMinX(frameCur) - CGRectGetMinX(frameTo)  + CGRectGetWidth(frameCur)/2 -  CGRectGetWidth(frameTo)/2));
-    float ty = - ((CGRectGetMinY(frameCur) - CGRectGetMinY(frameTo)  + CGRectGetHeight(frameCur)/2 -  CGRectGetHeight(frameTo)/2));
-    float scaleX = CGRectGetWidth(frameTo) / CGRectGetWidth(frameCur);
-    float scaleY = CGRectGetHeight(frameTo) / CGRectGetHeight(frameCur);
-    
+
+    float tx = - ((CGRectGetMinX(frameView) - CGRectGetMinX(frameTo)  + CGRectGetWidth(frameView)/2 -  CGRectGetWidth(frameTo)/2));
+    float ty = - ((CGRectGetMinY(frameView) - CGRectGetMinY(frameTo)  + CGRectGetHeight(frameView)/2 -  CGRectGetHeight(frameTo)/2));
+    float scaleX = CGRectGetWidth(frameTo) / CGRectGetWidth(frameView);
+    float scaleY = CGRectGetHeight(frameTo) / CGRectGetHeight(frameView);
+
     CATransform3D transformTo = imgViewAni.layer.transform;
     transformTo = CATransform3DTranslate(transformTo, tx, ty, 0.0f);
     transformTo = CATransform3DScale(transformTo, scaleX, scaleY, 1.0f);
     [UIView animateWithDuration:0.2f animations:^{
         imgViewAni.layer.transform = transformTo;
         [_backgroundView setAlpha:0.0f];
-        
+
     } completion:^(BOOL finished) {
         [self removeFromSuperview];
     }];
-}
-/** 处理滚动手势的图片滚动 */
-- (void) handleScrollValue:(float) scrollValue
-{
-    NSArray<CALayer*> *arySublayers = _viewLayerContainer.layer.sublayers;
-    for(CALayer *layer in arySublayers){
-        
-        CATransform3D transform = layer.transform;
-        
-        float positionY = CGRectGetMinY(layer.frame) + CGRectGetHeight(layer.frame)/2;
-        if(positionY >= _pointFirstItem.y){ // 开始向左右移动
-            int changeX  = scrollValue;
-//            int changeY = scrollValue/2;
-            transform = CATransform3DTranslate(transform, changeX, 0, 0);
-            
-        } else if(positionY <= _pointLastItem.y){
-            int changeY = scrollValue;
-            transform = CATransform3DTranslate(transform, 0, changeY, 0);
-            
-        } else {
-//            float height = CGRectGetHeight(layer.frame)/2;
-//            float changeY = scrollValue * transform.m11;
-//            float opactity = layer.opacity + changeY/height * _opacityChange;
-////            scale = scale + changeY;
-//            float scale = 1.0f + changeY/height * _scaleChange;
-//            opactity = (opactity <= 1.0f)? opactity : 1.0f;
-//
-//            transform = CATransform3DTranslate(transform, 0, changeY, 0);
-//            transform = CATransform3DScale(transform, scale, scale, 1.0f);
-//            layer.opacity = opactity;
-        }
-        layer.transform = transform;
-    }
 }
 
 // =============================================================================
@@ -364,53 +379,34 @@ static CGRect st_frameOri;
 /** 处理单击手势 */
 - (void) handleTapGes:(UITapGestureRecognizer*)tapGes
 {
-    [self closeImgShowView:tapGes.view];
+    UIView *view = [_muAryViewShow firstObject];
+    [self closeImgShowView:view];
 }
 - (void) handlePanGes:(UIPanGestureRecognizer*)panGes
 {
     switch(panGes.state){
         case UIGestureRecognizerStateBegan:{
-//            [panGes setTranslation:CGPointZero inView:panGes.view];
-            _pointMove = [panGes locationInView:panGes.view];
-            
+            [panGes setTranslation:CGPointZero inView:panGes.view];
+            _pointBeginTouch = panGes.view.center;
+            _isMoveAlready = NO;
             break;
         }
-        case UIGestureRecognizerStateChanged: {
+        case UIGestureRecognizerStateChanged:
+        {
+            CGPoint pointMove = [panGes translationInView:panGes.view];
+            [panGes setTranslation:CGPointZero inView:panGes.view];
+            CATransform3D transform = panGes.view.layer.transform;
             
-            CGPoint point = [panGes locationInView:panGes.view];
-            float x = -(_pointMove.x - point.x);
-            float y = -(_pointMove.y - point.y);
-            _pointMove = point;
+            pointMove = [self handlePointMove:pointMove withViewMove:panGes.view];
             
-            _scrollX += x;
-            _scrollY += y;
-            CATransform3D transform = CATransform3DIdentity;
-            transform = CATransform3DTranslate(transform, _scrollX, _scrollY, 0);
-            [_muAryLayer firstObject].transform = transform;
-
-//            CGPoint pointMove = [panGes translationInView:panGes.view];
-//            [panGes setTranslation:CGPointZero inView:panGes.view];
-            
-//            _scrollY = (fabs(pointMove.x) > fabs(pointMove.y))?  pointMove.x : pointMove.y;
-            
-//            int directionX = (pointMove.x < CGRectGetWidth(panGes.view.bounds)/2)? -1 : 1;
-//            CATransform3D transform = panGes.view.layer.transform;
-//
-////            CATransform3D transform = panGes.view.layer.transform;
-//            CALayer *layer1 = [_muAryLayer firstObject];
-//            CALayer *layer2 = panGes.view.layer;
-//            CATransform3D transform1 = layer1.transform;
-//            CATransform3D transform2 = layer2.transform;
-//
-//            transform = CATransform3DTranslate(transform, pointMove.x, pointMove.y, 0);
-//            panGes.view.layer.transform = transform;
-//            panGes.view.layer.transform = transform;
-            
-//            [self handleScrollValue:_scrollY];
+            transform = CATransform3DTranslate(transform, pointMove.x, pointMove.y, 0);
+            panGes.view.layer.transform = transform;
+            [self handleViewMove:panGes.view];
             
             break;
         }
         case UIGestureRecognizerStateEnded:{
+            [self handleEndMove:panGes.view];
             break;
         }
         default:{
@@ -418,17 +414,186 @@ static CGRect st_frameOri;
         }
     }
 }
+- (CGPoint) handlePointMove:(CGPoint)point withViewMove:(UIView*)viewMove
+{
+    float abs_x = fabs(point.x);
+    
+    CGPoint pointResult = point;
+    const float angle = M_PI_2/3; // 30度角
+    
+    const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
+    const float centerY = CGRectGetMinY(viewMove.frame) + CGRectGetHeight(viewMove.frame)/2;
+    const float limitX = viewMove.center.x;
+    const float limitY = viewMove.center.y;
+    
+    float resultY = tan(angle) * abs_x;
+    if(centerX <= limitX){ // 在左边
+        if(point.x <= 0){ // 正在向左滑动
+            pointResult.y = resultY;
+            
+        } else { // 正在向右滑动
+            pointResult.y = -resultY;
+        }
+        
+    } else { // 在右边
+        if(point.x >= 0){ // 正在向右滑动
+            pointResult.y = resultY;
+            
+        } else { // 正在向左滑动
+            pointResult.y = -resultY;
+        }
+    }
+    if(centerY + pointResult.y < limitY){
+        pointResult.y = (limitY - centerY);
+    }
+    
+    return pointResult;
+}
+- (void) handleViewMove:(UIView*) viewMove
+{
+    const float valueLeft = CGRectGetWidth(_viewContainter.bounds)/4;
+    const float valueRight = CGRectGetWidth(_viewContainter.bounds)*3/4;
+    const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
+    
+    if(_isMoveAlready != YES
+        && (centerX < valueLeft || centerX > valueRight)){
+        _isMoveAlready = YES;
+        [self moveImgItem:YES];
+        
+    } else if(_isMoveAlready == YES
+                && (centerX >= valueLeft && centerX <= valueRight)){
+        [self moveImgItem:NO];
+        _isMoveAlready = NO;
+    }
+}
+/** 是否移到下一个 */
+- (void) moveImgItem:(BOOL)isNext
+{
+    int num = 0;
+    for(int i=1; i<_muAryViewShow.count; i+=1){
+        UIView *viewFor = _muAryViewShow[i];
+        
+        if(isNext == YES){
+            num = i - 1;
+        } else {
+            num = i;
+        }
+        CATransform3D transform;
+        if(num < _muAryTransfrom.count){
+            transform = [_muAryTransfrom[num] CATransform3DValue];
+        } else {
+            transform = [[_muAryTransfrom lastObject] CATransform3DValue];
+        }
+        NSNumber *numAlpha;
+        if(num < _muAryAlpha.count){
+            numAlpha = _muAryAlpha[num];
+        } else {
+            numAlpha = [_muAryAlpha lastObject];
+        }
+        
+        CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
+        animation.toValue = [NSValue valueWithCATransform3D:transform];
+        
+        CABasicAnimation *animationOpactity = [CABasicAnimation animationWithKeyPath:@"opacity"];
+        animationOpactity.toValue = numAlpha;
+        
+        const float duration = 0.2f;
+        CFTimeInterval beginTime;
+        if(isNext == YES){
+            beginTime = duration/2 * num;
+        } else {
+            beginTime = duration/2 * (_muAryViewShow.count - num);
+        }
+        CAAnimationGroup *animationGroup = [self createAnimationGroup:@[animation, animationOpactity]
+                                                         withNumAlpha:numAlpha
+                                                            withLayer:viewFor.layer
+                                                   withTransformValue:[NSValue valueWithCATransform3D:transform]
+                                                        withBeginTime:beginTime
+                                                         withDuration:duration];
+        [self addAnimation:animationGroup withLayer:viewFor.layer];
+        
+    }
+    if(isNext == YES){
+        num += 1;
+        int index = (self.curIndex + (int)_muAryViewShow.count) % self.aryImgs.count;
+        
+        UIView *viewLast = [self getViewSave];
+        [viewLast setUserInteractionEnabled:NO];
+        [viewLast setFrame:st_frameOri];
+        [viewLast setTag:num];
+        UIImage *img = self.aryImgs[index];
+        viewLast.layer.contents = (__bridge id)img.CGImage;
+        [_viewContainter addSubview:viewLast];
+        [_viewContainter sendSubviewToBack:viewLast];
+        [_muAryViewShow addObject:viewLast];
+        
+        CATransform3D transform = [_muAryTransfrom[num] CATransform3DValue];
+        NSNumber *numAlpha = _muAryAlpha[num];
+        viewLast.layer.transform = transform;
+        viewLast.layer.opacity = [numAlpha floatValue];
+    } else {
+        UIView *viewLast = [_muAryViewShow lastObject];
+        viewLast.layer.contents = nil;
+        [viewLast removeFromSuperview];
+        [_muAryViewShow removeLastObject];
+    }
+}
+- (void) handleEndMove:(UIView*)viewMove
+{
+    const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
+    const float valueDirection = CGRectGetWidth(_viewContainter.bounds)/2;
+    if(_isMoveAlready == YES){ // 已经切换到下一个图片了，需要处理索引问题，把当前手势移动的图片View移除
+        [viewMove removeGestureRecognizer:_panGes];
+        CGRect frameTo = viewMove.frame;
+        if(centerX < valueDirection){
+            frameTo.origin.x = -CGRectGetWidth(viewMove.frame);
+            
+        } else {
+            frameTo.origin.x = CGRectGetWidth(_viewContainter.bounds);
+        }
+        [UIView animateWithDuration:0.2f animations:^{
+            viewMove.frame = frameTo;
+            
+        } completion:^(BOOL finished) {
+            
+            [viewMove removeFromSuperview];
+            [_muAryViewShow removeObject:viewMove];
+            self.curIndex += 1;
+            if(self.curIndex >= self.aryImgs.count){
+                self.curIndex = 0;
+            }
+            
+            UIView *viewFirst = [_muAryViewShow firstObject];
+            [viewFirst setUserInteractionEnabled:YES];
+            [viewFirst addGestureRecognizer:_panGes];
+        }];
+        
+    } else { // 没有切换，那么需要把正在手势移动的图片回复到原始位置
+        CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
+        animation.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+        animation.fillMode = kCAFillModeBoth;
+        animation.removedOnCompletion = NO;
+        animation.delegate = (id)self;
+        [animation setValue:@(viewMove.layer.opacity) forKey:AnimationKey_Opacity];
+        [animation setValue:viewMove.layer forKey:AnimationKey_Layer];
+        [animation setValue:[NSValue valueWithCATransform3D:CATransform3DIdentity] forKey:AnimationKey_Transform];
+        
+        [viewMove.layer addAnimation:animation forKey:@"animation"];
+    }
+}
+
 // =============================================================================
 #pragma mark - CAAnimationDelegate
 - (void)animationDidStop:(CAAnimation *)anim finished:(BOOL)flag
 {
-    CATransform3D transform = [(NSValue*)[anim valueForKey:@"transform"] CATransform3DValue];
-    float opacity = [(NSNumber*)[anim valueForKey:@"opacity"] floatValue];
-    CALayer *layer = [anim valueForKey:@"layer"];
+    CATransform3D transform = [(NSValue*)[anim valueForKey:AnimationKey_Transform] CATransform3DValue];
+    float opacity = [(NSNumber*)[anim valueForKey:AnimationKey_Opacity] floatValue];
+    CALayer *layer = [anim valueForKey:AnimationKey_Layer];
     
     layer.transform = transform;
     layer.opacity = opacity;
     [layer removeAllAnimations];
+    [self checkoutAnimationWithLayer:layer];
 }
 
 @end
