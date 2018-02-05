@@ -457,8 +457,7 @@ static CGRect st_frameOri;
     if(centerX <= valueDistance){
         change = (valueDistance-centerX)/valueDistance;
     } else {
-        valueDistance = CGRectGetWidth(_viewContainter.bounds);
-        change = centerX/valueDistance;
+        change = (centerX-valueDistance)/valueDistance;
     }
     if(change < 0){
         change = 0;
