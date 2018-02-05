@@ -11,6 +11,7 @@
 #import "UIView+handleImg.h"
 #import "ImgShowView_Line.h"
 #import "ImgShowView_Vertical.h"
+#import "ImgShowView_Vertical_2.h"
 
 @interface ImgShow()
 
@@ -47,6 +48,10 @@ static UIView *imgViewAni = nil;
         }
         case ImgShowType_Vertical:{
             viewResult = [[ImgShowView_Vertical alloc] initWithFrame:frame];
+            break;
+        }
+        case ImgShowType_Vertical_2:{
+            viewResult = [[ImgShowView_Vertical_2 alloc] initWithFrame:frame];
             break;
         }
         default:
@@ -88,6 +93,10 @@ static UIView *imgViewAni = nil;
         }
         case ImgShowType_Vertical:{
             transformResult = [ImgShowView_Vertical getBeginTransform:frameBegin withImg:imgCur];;
+            break;
+        }
+        case ImgShowType_Vertical_2:{
+            transformResult = [ImgShowView_Vertical_2 getBeginTransform:frameBegin withImg:imgCur];;
             break;
         }
     }
@@ -140,6 +149,15 @@ static UIView *imgViewAni = nil;
         }
         case ImgShowType_Vertical:{
             __block ImgShowView_Vertical *view = (ImgShowView_Vertical*)obj.imgShowView;
+            [view setBackViewAlpha:0.0f];
+            [UIView animateWithDuration:duration animations:^{
+                [view setBackViewAlpha:1.0f];
+                view = nil;
+            }];
+            break;
+        }
+        case ImgShowType_Vertical_2:{
+            __block ImgShowView_Vertical_2 *view = (ImgShowView_Vertical_2*)obj.imgShowView;
             [view setBackViewAlpha:0.0f];
             [UIView animateWithDuration:duration animations:^{
                 [view setBackViewAlpha:1.0f];

@@ -69,7 +69,7 @@ static NSCache *ImgCache = nil;
     [muAryResult addObject:data];
     
     // --------------
-    data = [[ItemData alloc] initWithTitle:@"王者荣耀CosPlay"];
+    data = [[ItemData alloc] initWithTitle:@"王者荣耀CosPlay-1"];
     data.aryImgs = @[
                      [[self class] getFileURLWithResource:@"time-18" withType:@"jpg"],
                      [[self class] getFileURLWithResource:@"time-19" withType:@"jpg"],
@@ -81,6 +81,21 @@ static NSCache *ImgCache = nil;
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
     data.imgShowType = ImgShowType_Line;
+    [muAryResult addObject:data];
+    
+    // --------------
+    data = [[ItemData alloc] initWithTitle:@"王者荣耀CosPlay-2"];
+    data.aryImgs = @[
+                     [[self class] getFileURLWithResource:@"time-18" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-19" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-14" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-15" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-16" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-17" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-20" withType:@"jpg"],
+                     ];
+    data.itemStyle = ItemStyle_Imgs_2;
+    data.imgShowType = ImgShowType_Vertical_2;
     [muAryResult addObject:data];
     
     // --------------

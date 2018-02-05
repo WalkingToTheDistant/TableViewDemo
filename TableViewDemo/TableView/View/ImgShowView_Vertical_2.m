@@ -6,7 +6,7 @@
 //  Copyright © 2017年 LHJ. All rights reserved.
 //
 
-#import "ImgShowView_Vertical.h"
+#import "ImgShowView_Vertical_2.h"
 #import "CPublic.h"
 
 static NSString *const AnimationKey_Transform = @"Transform";
@@ -14,7 +14,7 @@ static NSString *const AnimationKey_Opacity = @"Opacity";
 static NSString *const AnimationKey_Layer = @"Layer";
 static NSString *const Key_AnimationGroup = @"Key_AnimationGroup";
 
-@interface ImgShowView_Vertical()<CAAnimationDelegate>
+@interface ImgShowView_Vertical_2()<CAAnimationDelegate>
 
 @property(nonatomic, retain) UIView *viewWhiteColor;
 
@@ -38,13 +38,11 @@ static NSString *const Key_AnimationGroup = @"Key_AnimationGroup";
 
 @property(nonatomic, assign) CGPoint pointBeginTouch;
 
-@property(nonatomic, assign) BOOL isMoveAlready;
-
 @property(nonatomic, retain) NSMutableDictionary<NSString*, NSMutableArray*> *muDicAnimation;
 
 @end
 
-@implementation ImgShowView_Vertical
+@implementation ImgShowView_Vertical_2
 
 static CGRect st_frameOri;
 
@@ -147,6 +145,9 @@ static CGRect st_frameOri;
             float ty = -(CGRectGetHeight(st_frameOri)/10)*i;
             transform = CATransform3DTranslate(transform, 0, ty, 0);
             transform = CATransform3DScale(transform, scale, scale, 1);
+            
+            NSLog(@"begin:   y - %f  //////  scaleX - %f   //////  scaleY - %f", ty, scale, scale);
+            NSLog(@"end:     y - %f  //////  scaleX - %f   //////  scaleY - %f", transform.m42, transform.m22, transform.m11);
         }
         float alpha = 1.0f - (0.2f*i);
         alpha = (alpha >= 0.f)? alpha : 0.f;
@@ -325,7 +326,7 @@ static CGRect st_frameOri;
         && muAry.count > 0){
         CAAnimationGroup *animation = [muAry firstObject];
         [muAry removeObject:animation];
-        animation.beginTime = CACurrentMediaTime() + animation.beginTime*2;
+        animation.beginTime = CACurrentMediaTime() + animation.beginTime;
         [layer addAnimation:animation forKey:Key_AnimationGroup];
     }
 }
@@ -388,7 +389,6 @@ static CGRect st_frameOri;
         case UIGestureRecognizerStateBegan:{
             [panGes setTranslation:CGPointZero inView:panGes.view];
             _pointBeginTouch = panGes.view.center;
-            _isMoveAlready = NO;
             break;
         }
         case UIGestureRecognizerStateChanged:
@@ -401,7 +401,7 @@ static CGRect st_frameOri;
             
             transform = CATransform3DTranslate(transform, pointMove.x, pointMove.y, 0);
             panGes.view.layer.transform = transform;
-            [self handleViewMove:panGes.view];
+            [self handleViewMove:panGes.view withPointMove:pointMove] ;
             
             break;
         }
@@ -449,21 +449,102 @@ static CGRect st_frameOri;
     
     return pointResult;
 }
-- (void) handleViewMove:(UIView*) viewMove
+- (void) handleViewMove:(UIView*)viewMove withPointMove:(CGPoint) pointMove
+{
+    const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
+    float valueDistance = CGRectGetWidth(_viewContainter.bounds)/2;
+    float change = 0;
+    if(centerX <= valueDistance){
+        change = (valueDistance-centerX)/valueDistance;
+    } else {
+        valueDistance = CGRectGetWidth(_viewContainter.bounds);
+        change = centerX/valueDistance;
+    }
+    if(change < 0){
+        change = 0;
+    } else if(change > 1.0f){
+        change = 1.0f;
+    }
+    
+    for(int i=1; i<_muAryViewShow.count; i+=1){
+        // 先计算Y坐标偏移
+        CATransform3D transformPre = [_muAryTransfrom[i-1] CATransform3DValue];
+        CATransform3D transform = [_muAryTransfrom[i] CATransform3DValue];
+        
+        const float valueTy = transformPre.m42 - transform.m42;
+        float temp = change * valueTy;
+        const float ty = transform.m42 + temp;
+        
+        // 再计算缩放偏移值，因为X和Y坐标的缩放值是一样的，所以只需要计算一个就可以了
+        const float valueScale = transformPre.m11 - transform.m11;
+        temp = valueScale * change;
+        const float scale = transform.m11 + temp;
+        CATransform3D transformResult = CATransform3DIdentity;
+        transformResult = CATransform3DTranslate(transformResult, 0, ty, 0);
+        transformResult = CATransform3DScale(transformResult, scale, scale, 1.0);
+        
+        // 计算透明度
+        const float alphaPre = [_muAryAlpha[i-1] floatValue];
+        const float alpha = [_muAryAlpha[i] floatValue];
+        const float valueAlpha = alphaPre - alpha;
+        temp = valueAlpha * change;
+        const float alphaResult = alpha + temp;
+        
+        // 结果赋值给View
+        UIView *viewFor = _muAryViewShow[i];
+        viewFor.layer.transform = transformResult;
+        viewFor.layer.opacity = alphaResult;
+    }
+}
+- (void) handleEndMove:(UIView*)viewMove
 {
     const float valueLeft = CGRectGetWidth(_viewContainter.bounds)/4;
     const float valueRight = CGRectGetWidth(_viewContainter.bounds)*3/4;
     const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
+    const float valueDirection = CGRectGetWidth(_viewContainter.bounds)/2;
     
-    if(_isMoveAlready != YES
-        && (centerX < valueLeft || centerX > valueRight)){
-        _isMoveAlready = YES;
-        [self moveImgItem:YES];
+    if(centerX < valueLeft || centerX > valueRight){
+        [viewMove removeGestureRecognizer:_panGes];
+        CGRect frameTo = viewMove.frame;
+        if(centerX < valueDirection){
+            frameTo.origin.x = -CGRectGetWidth(viewMove.frame);
+            
+        } else {
+            frameTo.origin.x = CGRectGetWidth(_viewContainter.bounds);
+        }
+        [UIView animateWithDuration:0.2f animations:^{
+            viewMove.frame = frameTo;
+            
+        } completion:^(BOOL finished) {
+            
+            [viewMove removeFromSuperview];
+            @synchronized(_muAryViewShow){
+                [_muAryViewShow removeObject:viewMove];
+                UIView *viewFirst = [_muAryViewShow firstObject];
+                [viewFirst setUserInteractionEnabled:YES];
+                [viewFirst addGestureRecognizer:_panGes];
+             }
+        }];
+        @synchronized(_muAryViewShow){
+            [self moveImgItem:YES];
+            self.curIndex += 1;
+            if(self.curIndex >= self.aryImgs.count){
+                self.curIndex = 0;
+            }
+        }
         
-    } else if(_isMoveAlready == YES
-                && (centerX >= valueLeft && centerX <= valueRight)){
+    } else if(centerX >= valueLeft && centerX <= valueRight){
+        CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
+        animation.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
+        animation.fillMode = kCAFillModeBoth;
+        animation.removedOnCompletion = NO;
+        animation.delegate = (id)self;
+        [animation setValue:@(viewMove.layer.opacity) forKey:AnimationKey_Opacity];
+        [animation setValue:viewMove.layer forKey:AnimationKey_Layer];
+        [animation setValue:[NSValue valueWithCATransform3D:CATransform3DIdentity] forKey:AnimationKey_Transform];
+        
+        [viewMove.layer addAnimation:animation forKey:@"animation"];
         [self moveImgItem:NO];
-        _isMoveAlready = NO;
     }
 }
 /** 是否移到下一个 */
@@ -499,11 +580,12 @@ static CGRect st_frameOri;
         
         const float duration = 0.2f;
         CFTimeInterval beginTime;
-        if(isNext == YES){
-            beginTime = duration/2 * num;
-        } else {
-            beginTime = duration/2 * (_muAryViewShow.count - num);
-        }
+//        if(isNext == YES){
+//            beginTime = duration/2 * num;
+//        } else {
+//            beginTime = duration/2 * (_muAryViewShow.count - num);
+//        }
+        beginTime = 0;
         CAAnimationGroup *animationGroup = [self createAnimationGroup:@[animation, animationOpactity]
                                                          withNumAlpha:numAlpha
                                                             withLayer:viewFor.layer
@@ -532,53 +614,10 @@ static CGRect st_frameOri;
         viewLast.layer.transform = transform;
         viewLast.layer.opacity = [numAlpha floatValue];
     } else {
-        UIView *viewLast = [_muAryViewShow lastObject];
-        viewLast.layer.contents = nil;
-        [viewLast removeFromSuperview];
-        [_muAryViewShow removeLastObject];
-    }
-}
-- (void) handleEndMove:(UIView*)viewMove
-{
-    const float centerX = CGRectGetMinX(viewMove.frame) + CGRectGetWidth(viewMove.frame)/2;
-    const float valueDirection = CGRectGetWidth(_viewContainter.bounds)/2;
-    if(_isMoveAlready == YES){ // 已经切换到下一个图片了，需要处理索引问题，把当前手势移动的图片View移除
-        [viewMove removeGestureRecognizer:_panGes];
-        CGRect frameTo = viewMove.frame;
-        if(centerX < valueDirection){
-            frameTo.origin.x = -CGRectGetWidth(viewMove.frame);
-            
-        } else {
-            frameTo.origin.x = CGRectGetWidth(_viewContainter.bounds);
-        }
-        [UIView animateWithDuration:0.2f animations:^{
-            viewMove.frame = frameTo;
-            
-        } completion:^(BOOL finished) {
-            
-            [viewMove removeFromSuperview];
-            [_muAryViewShow removeObject:viewMove];
-            self.curIndex += 1;
-            if(self.curIndex >= self.aryImgs.count){
-                self.curIndex = 0;
-            }
-            
-            UIView *viewFirst = [_muAryViewShow firstObject];
-            [viewFirst setUserInteractionEnabled:YES];
-            [viewFirst addGestureRecognizer:_panGes];
-        }];
-        
-    } else { // 没有切换，那么需要把正在手势移动的图片回复到原始位置
-        CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:@"transform"];
-        animation.toValue = [NSValue valueWithCATransform3D:CATransform3DIdentity];
-        animation.fillMode = kCAFillModeBoth;
-        animation.removedOnCompletion = NO;
-        animation.delegate = (id)self;
-        [animation setValue:@(viewMove.layer.opacity) forKey:AnimationKey_Opacity];
-        [animation setValue:viewMove.layer forKey:AnimationKey_Layer];
-        [animation setValue:[NSValue valueWithCATransform3D:CATransform3DIdentity] forKey:AnimationKey_Transform];
-        
-        [viewMove.layer addAnimation:animation forKey:@"animation"];
+//        UIView *viewLast = [_muAryViewShow lastObject];
+//        viewLast.layer.contents = nil;
+//        [viewLast removeFromSuperview];
+//        [_muAryViewShow removeLastObject];
     }
 }
 

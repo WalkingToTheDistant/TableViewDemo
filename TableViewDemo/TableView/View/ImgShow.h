@@ -10,8 +10,8 @@
 
 typedef enum : int{
     ImgShowType_Line = 0,
-    ImgShowType_Vertical,
-    
+    ImgShowType_Vertical, /* 图片翻转-1 */
+    ImgShowType_Vertical_2, /* 图片翻转-2 */
 }ImgShowType;
 
 @interface ImgShow : NSObject

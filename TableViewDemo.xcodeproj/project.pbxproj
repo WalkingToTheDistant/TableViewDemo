@@ -51,6 +51,7 @@
 		CFA5BEFF1FA2D91E0042AA4E /* HandleData.m in Sources */ = {isa = PBXBuildFile; fileRef = CFA5BEFE1FA2D91E0042AA4E /* HandleData.m */; };
 		CFA8BADF1FBE874D00E7F3AB /* ProcessDialog.m in Sources */ = {isa = PBXBuildFile; fileRef = CFA8BADE1FBE874D00E7F3AB /* ProcessDialog.m */; };
 		CFB6526A1FC41131009DC2BE /* FFTspark.png in Resources */ = {isa = PBXBuildFile; fileRef = CFB652691FC41130009DC2BE /* FFTspark.png */; };
+		CFC2BABB2027FC400037CB1E /* ImgShowView_Vertical_2.m in Sources */ = {isa = PBXBuildFile; fileRef = CFC2BABA2027FC3F0037CB1E /* ImgShowView_Vertical_2.m */; };
 		CFDD07961FA8843D009603A6 /* ImgShow.m in Sources */ = {isa = PBXBuildFile; fileRef = CFDD07951FA8843D009603A6 /* ImgShow.m */; };
 		CFF8AB4B1FA3132600E8AA50 /* GCD.m in Sources */ = {isa = PBXBuildFile; fileRef = CFF8AB4A1FA3132600E8AA50 /* GCD.m */; };
 		CFF8AB4E1FA31A1400E8AA50 /* UIView+handleImg.m in Sources */ = {isa = PBXBuildFile; fileRef = CFF8AB4D1FA31A1400E8AA50 /* UIView+handleImg.m */; };
@@ -119,6 +120,8 @@
 		CFA8BADD1FBE874D00E7F3AB /* ProcessDialog.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcessDialog.h; sourceTree = "<group>"; };
 		CFA8BADE1FBE874D00E7F3AB /* ProcessDialog.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ProcessDialog.m; sourceTree = "<group>"; };
 		CFB652691FC41130009DC2BE /* FFTspark.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = FFTspark.png; sourceTree = "<group>"; };
+		CFC2BAB92027FC3F0037CB1E /* ImgShowView_Vertical_2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImgShowView_Vertical_2.h; sourceTree = "<group>"; };
+		CFC2BABA2027FC3F0037CB1E /* ImgShowView_Vertical_2.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ImgShowView_Vertical_2.m; sourceTree = "<group>"; };
 		CFDD07941FA8843D009603A6 /* ImgShow.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ImgShow.h; sourceTree = "<group>"; };
 		CFDD07951FA8843D009603A6 /* ImgShow.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ImgShow.m; sourceTree = "<group>"; };
 		CFF8AB491FA3132600E8AA50 /* GCD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GCD.h; sourceTree = "<group>"; };
@@ -286,6 +289,8 @@
 				CF98F8391FB1C2EA00BEB851 /* ImgShowView_Line.m */,
 				CF0FB0531FCEB3C60050570B /* ImgShowView_Vertical.h */,
 				CF0FB0541FCEB3C60050570B /* ImgShowView_Vertical.m */,
+				CFC2BAB92027FC3F0037CB1E /* ImgShowView_Vertical_2.h */,
+				CFC2BABA2027FC3F0037CB1E /* ImgShowView_Vertical_2.m */,
 			);
 			path = View;
 			sourceTree = "<group>";
@@ -424,6 +429,7 @@
 				CFF8AB591FA33B8200E8AA50 /* TableViewCell_ItemStyle_OneImg.m in Sources */,
 				CF98F8371FB18F4F00BEB851 /* BaseTableViewCell.m in Sources */,
 				CFA5BEAF1FA2CDAB0042AA4E /* AppDelegate.m in Sources */,
+				CFC2BABB2027FC400037CB1E /* ImgShowView_Vertical_2.m in Sources */,
 				CFA8BADF1FBE874D00E7F3AB /* ProcessDialog.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
