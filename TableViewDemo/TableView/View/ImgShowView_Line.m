@@ -20,6 +20,8 @@
 
 @property(nonatomic, assign) BOOL beginShow;
 
+@property(nonatomic, assign) BOOL isHandleAlready;
+
 @end
 
 @implementation ImgShowView_Line
@@ -105,7 +107,9 @@
     if(CGRectEqualToRect(self.frame, CGRectZero) == YES) { return; }
     
     [self handleWhiteView];
-    if(_beginShow == YES){
+    if(_beginShow == YES
+        && _isHandleAlready != YES){
+        _isHandleAlready = YES;
         int x = self.bounds.size.width * self.curIndex;
         [_collectionView setContentOffset:CGPointMake(x, 0)];
     }
@@ -125,12 +129,15 @@
 }
 
 /** 开始显示图片 */
-- (void) beginShowImg
-{    
-    _beginShow = YES; // 开启显示图片
+- (void) beginShowImg:(void(^)(void))completeBlock;
+{
     [_collectionView reloadData];
+    _beginShow = YES; // 开启显示图片
     [self setNeedsLayout];
     [self layoutIfNeeded];
+    if(completeBlock != nil){
+        completeBlock();
+    }
 }
 - (void) closeImgShowView:(UIView*)view
 {

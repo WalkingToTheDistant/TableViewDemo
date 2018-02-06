@@ -11,8 +11,10 @@
 @implementation ImgShowView
 
 /** 开始显示图片 */
-- (void) beginShowImg{
-    
+- (void) beginShowImg:(void(^)(void))completeBlock{
+    if(completeBlock != nil){
+        completeBlock();
+    }
 }
 
 @end

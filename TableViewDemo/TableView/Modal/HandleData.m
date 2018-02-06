@@ -54,7 +54,7 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"timg-24" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
-    data.imgShowType = ImgShowType_Vertical;
+    data.imgShowType = ImgShowType_Line;
     [muAryResult addObject:data];
     
     // --------------
@@ -80,19 +80,21 @@ static NSCache *ImgCache = nil;
                      [[self class] getFileURLWithResource:@"time-20" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
-    data.imgShowType = ImgShowType_Line;
+    data.imgShowType = ImgShowType_Vertical;
     [muAryResult addObject:data];
     
     // --------------
     data = [[ItemData alloc] initWithTitle:@"王者荣耀CosPlay-2"];
     data.aryImgs = @[
-                     [[self class] getFileURLWithResource:@"time-18" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-19" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-14" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-15" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-16" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-17" withType:@"jpg"],
-                     [[self class] getFileURLWithResource:@"time-20" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-25" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-26" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-27" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-28" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-29" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-30" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-31" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-32" withType:@"jpg"],
+                     [[self class] getFileURLWithResource:@"time-33" withType:@"jpg"],
                      ];
     data.itemStyle = ItemStyle_Imgs_2;
     data.imgShowType = ImgShowType_Vertical_2;

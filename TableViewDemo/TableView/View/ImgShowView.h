@@ -19,6 +19,6 @@
 @property(nonatomic, assign) int curIndex;
 
 /** 开始显示图片 */
-- (void) beginShowImg;
+- (void) beginShowImg:(void(^)(void))completeBlock;
 
 @end

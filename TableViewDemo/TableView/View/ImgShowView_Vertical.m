@@ -42,6 +42,8 @@ static NSString *const Key_AnimationGroup = @"Key_AnimationGroup";
 
 @property(nonatomic, retain) NSMutableDictionary<NSString*, NSMutableArray*> *muDicAnimation;
 
+@property(nonatomic, retain) NSMutableArray<UIImage*> *muAryImgsHUD;
+
 @end
 
 @implementation ImgShowView_Vertical
@@ -82,6 +84,7 @@ static CGRect st_frameOri;
     [_muAryViewSave removeAllObjects];
     [_muAryViewShow removeAllObjects];
     [_muDicAnimation removeAllObjects];
+    [_muAryImgsHUD removeAllObjects];
 }
 
 // =============================================================================
@@ -119,7 +122,7 @@ static CGRect st_frameOri;
 - (void) createTransfroms
 {
     _numOfShowView = 5;
-    _numOfShowView = (_numOfShowView <= self.aryImgs.count) ? _numOfShowView : (int)self.aryImgs.count;
+    _numOfShowView = (_numOfShowView <= _muAryImgsHUD.count) ? _numOfShowView : (int)_muAryImgsHUD.count;
     _muDicAnimation = [NSMutableDictionary new];
     
     if(_muAryTransfrom == nil){
@@ -208,20 +211,57 @@ static CGRect st_frameOri;
     }
 }
 /** 开始显示图片 */
-- (void) beginShowImg
+- (void) beginShowImg:(void(^)(void))completeBlock;
 {
     _beginShow = YES; // 开启显示图片
     [self setNeedsLayout];
     [self layoutIfNeeded];
-    [self createTransfroms];
-    [self beginAniForImgShow];
+    
+    dispatch_group_t dispatchGroup = dispatch_group_create();
+    
+    _muAryImgsHUD = [NSMutableArray arrayWithCapacity:self.aryImgHDURLs.count];
+    __weak typeof(self) wkSelf = self;
+    dispatch_semaphore_t semaphore =  dispatch_semaphore_create(3); // 用信号量的方式控制子线程的个数，这里同一时间限制3个子线程，避免线程过多
+    for(int i=0; i<self.aryImgHDURLs.count; i+=1){
+        dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+        [_muAryImgsHUD addObject:(id)[NSNull null]];
+        __block int index = i;
+        __block NSURL *url = self.aryImgHDURLs[i];
+        dispatch_group_async(dispatchGroup, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            
+            NSLog(@"线程:%i", i);
+            if(url == nil) { return; }
+            
+            NSData *data = [NSData dataWithContentsOfURL:url];
+            if(data == nil) { return; }
+            
+            UIImage *img = [UIImage imageWithData:data];
+            if(img == nil) { return; }
+            
+            NSLog(@"线程:%i -- 添加成功", i);
+            [wkSelf.muAryImgsHUD setObject:img atIndexedSubscript:index];
+            img = nil;
+            url = nil;
+            data = nil;
+            dispatch_semaphore_signal(semaphore);
+        });
+    }
+    
+    dispatch_group_notify(dispatchGroup, dispatch_get_main_queue(), ^{
+        NSLog(@"muAryImgsHUD.count == %i", (int)wkSelf.muAryImgsHUD.count);
+        [wkSelf createTransfroms];
+        [wkSelf beginAniForImgShow];
+        if(completeBlock != nil){
+            completeBlock();
+        }
+    });
 }
 - (void) beginAniForImgShow{ // 启动图片出现的动画
     
     CGRect frame = st_frameOri;
     NSInteger countFor = _numOfShowView;
-    if(countFor > self.aryImgs.count){
-        countFor = self.aryImgs.count;
+    if(countFor > _muAryImgsHUD.count){
+        countFor = _muAryImgsHUD.count;
     }
     
     if(_muAryViewShow == nil){
@@ -233,7 +273,7 @@ static CGRect st_frameOri;
         [view setUserInteractionEnabled:NO];
         [view setFrame:frame];
         [view setTag:num];
-        UIImage *imgFor = self.aryImgs[index];
+        UIImage *imgFor = _muAryImgsHUD[index];
         view.layer.contents = (__bridge id)imgFor.CGImage;
         [_viewContainter addSubview:view];
         [_viewContainter sendSubviewToBack:view];
@@ -270,7 +310,7 @@ static CGRect st_frameOri;
         [self addAnimation:animationGroup withLayer:view.layer];
         
         index += 1;
-        if(index >= self.aryImgs.count){
+        if(index >= _muAryImgsHUD.count){
             index = 0;
         }
     }
@@ -515,13 +555,13 @@ static CGRect st_frameOri;
     }
     if(isNext == YES){
         num += 1;
-        int index = (self.curIndex + (int)_muAryViewShow.count) % self.aryImgs.count;
+        int index = (self.curIndex + (int)_muAryViewShow.count) % _muAryImgsHUD.count;
         
         UIView *viewLast = [self getViewSave];
         [viewLast setUserInteractionEnabled:NO];
         [viewLast setFrame:st_frameOri];
         [viewLast setTag:num];
-        UIImage *img = self.aryImgs[index];
+        UIImage *img = _muAryImgsHUD[index];
         viewLast.layer.contents = (__bridge id)img.CGImage;
         [_viewContainter addSubview:viewLast];
         [_viewContainter sendSubviewToBack:viewLast];
@@ -559,7 +599,7 @@ static CGRect st_frameOri;
             [viewMove removeFromSuperview];
             [_muAryViewShow removeObject:viewMove];
             self.curIndex += 1;
-            if(self.curIndex >= self.aryImgs.count){
+            if(self.curIndex >= _muAryImgsHUD.count){
                 self.curIndex = 0;
             }
             

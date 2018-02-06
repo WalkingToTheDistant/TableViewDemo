@@ -172,10 +172,10 @@ static UIView *imgViewAni = nil;
 #pragma mark - 类方法
 - (void)animationDidStop:(CAAnimation *)anim finished:(BOOL)flag
 {
-    [imgViewAni removeFromSuperview];
-    
     ImgShow *obj = [ImgShow sharedImgShow];
-    [obj.imgShowView beginShowImg];
+    [obj.imgShowView beginShowImg:^{
+        [imgViewAni removeFromSuperview];
+    }];
 }
 
 
